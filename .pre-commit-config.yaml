@@ -1,0 +1,52 @@
+---
+default_stages: [pre-commit, manual]
+default_install_hook_types: [pre-commit, pre-push, commit-msg, prepare-commit-msg]
+
+repos:
+  # Local tools (must be installed in your environment)
+  - repo: local
+    hooks:
+      # ==================== SECURITY HOOKS ====================
+      - id: gitleaks
+        name: GitLeaks Security Scan
+        entry: gitleaks
+        language: system
+        args: ["detect", "--source", ".", "--verbose"]
+        pass_filenames: false
+        always_run: true
+
+  # OpenTofu
+  - repo: https://github.com/tofuutils/pre-commit-opentofu
+    rev: v2.2.1
+    hooks:
+      - id: tofu_fmt
+      - id: tofu_docs
+        args:
+          - --args=--output-file=README.md
+          - --args=--output-mode=inject
+      - id: tofu_validate
+        args:
+          - --tf-init-args=-upgrade
+      - id: tofu_tflint
+        args:
+          - --args=--disable-rule=terraform_required_version
+          - --args=--disable-rule=terraform_required_providers
+          - --args=--disable-rule=terraform_module_pinned_source
+          - --args=--disable-rule=terraform_unused_declarations
+          - --hook-config=--tf-init-args=-upgrade
+
+  # General file formatting and validation
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(\.pre-commit-config.*\.yaml$|\.pre-commit-hooks\.yaml$)
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+        args: ["--fix=lf"]

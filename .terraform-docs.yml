@@ -1,0 +1,218 @@
+formatter: "markdown table"
+
+version: ""
+
+header-from: main.tf
+footer-from: ""
+
+recursive:
+  enabled: false
+  path: .
+
+sections:
+  hide: []
+  show: []
+
+content: |-
+  # Hetzner Cloud VM Terraform Module
+
+  This module creates and manages Hetzner Cloud servers and related infrastructure using the hcloud provider.
+
+  ## Features
+
+  - Full server lifecycle management
+  - Multi-server deployment via `for_each`
+  - SSH key management
+  - Private network and subnet support
+  - Firewall rules with inbound/outbound support
+  - Block volume management with automount
+  - Placement groups for high availability
+  - Reverse DNS configuration
+  - Cloud-init / user data support
+  - Public IPv4/IPv6 toggle
+  - Flexible per-server overrides
+  - Configurable via Terragrunt
+
+  ## Usage
+
+  ### Basic Example (Single Server)
+
+  ```hcl
+  module "hcloud_vm" {
+    source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+    hcloud_token = var.hcloud_token
+
+    ssh_keys = {
+      my-key = "ssh-ed25519 AAAA... user@host"
+    }
+
+    servers = {
+      web-server = {
+        name        = "web-01"
+        server_type = "cx22"
+        image       = "ubuntu-24.04"
+        location    = "nbg1"
+        ssh_keys    = ["my-key"]
+        labels      = { env = "production", role = "web" }
+      }
+    }
+  }
+  ```
+
+  ### Multi-Server with Network and Firewall
+
+  ```hcl
+  module "hcloud_vm" {
+    source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+    hcloud_token = var.hcloud_token
+
+    ssh_keys = {
+      deploy-key = "ssh-ed25519 AAAA... deploy@ci"
+    }
+
+    firewalls = {
+      web-fw = {
+        rules = [
+          {
+            direction  = "in"
+            protocol   = "tcp"
+            port       = "22"
+            source_ips = ["0.0.0.0/0", "::/0"]
+          },
+          {
+            direction  = "in"
+            protocol   = "tcp"
+            port       = "80"
+            source_ips = ["0.0.0.0/0", "::/0"]
+          },
+          {
+            direction  = "in"
+            protocol   = "tcp"
+            port       = "443"
+            source_ips = ["0.0.0.0/0", "::/0"]
+          }
+        ]
+      }
+    }
+
+    networks = {
+      internal = {
+        ip_range = "10.0.0.0/16"
+      }
+    }
+
+    subnets = {
+      internal-subnet = {
+        network_key  = "internal"
+        ip_range     = "10.0.1.0/24"
+        network_zone = "eu-central"
+      }
+    }
+
+    servers = {
+      app-01 = {
+        name         = "app-01"
+        server_type  = "cx32"
+        image        = "ubuntu-24.04"
+        location     = "fsn1"
+        ssh_keys     = ["deploy-key"]
+        firewall_keys = ["web-fw"]
+        network_keys = ["internal"]
+        private_ip   = "10.0.1.10"
+        backups      = true
+      }
+      app-02 = {
+        name         = "app-02"
+        server_type  = "cx32"
+        image        = "ubuntu-24.04"
+        location     = "fsn1"
+        ssh_keys     = ["deploy-key"]
+        firewall_keys = ["web-fw"]
+        network_keys = ["internal"]
+        private_ip   = "10.0.1.11"
+        backups      = true
+      }
+    }
+  }
+  ```
+
+  ### Terragrunt Example
+
+  ```hcl
+  terraform {
+    source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+  }
+
+  inputs = {
+    hcloud_token = get_env("HCLOUD_TOKEN")
+
+    ssh_keys = {
+      admin = "ssh-ed25519 AAAA... admin@host"
+    }
+
+    servers = {
+      db-server = {
+        name        = "db-01"
+        server_type = "cx42"
+        image       = "debian-12"
+        location    = "nbg1"
+        ssh_keys    = ["admin"]
+        labels      = { env = "production", role = "database" }
+      }
+    }
+
+    volumes = {
+      db-data = {
+        size       = 100
+        server_key = "db-server"
+        format     = "xfs"
+        automount  = true
+      }
+    }
+  }
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+output-values:
+  enabled: false
+  from: ""
+
+sort:
+  enabled: true
+  by: name
+
+settings:
+  anchor: true
+  color: true
+  default: true
+  description: true
+  escape: true
+  hide-empty: false
+  html: true
+  indent: 2
+  lockfile: true
+  read-comments: true
+  required: true
+  sensitive: true
+  type: true
