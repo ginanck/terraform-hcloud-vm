@@ -123,6 +123,192 @@ module "hcloud_vm" {
 }
 ```
 
+### Placement Groups
+
+```hcl
+module "hcloud_vm" {
+  source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+  hcloud_token = var.hcloud_token
+
+  ssh_keys = {
+    deploy-key = "ssh-ed25519 AAAA... deploy@ci"
+  }
+
+  placement_groups = {
+    web-spread = {
+      type = "spread"
+    }
+  }
+
+  servers = {
+    web-01 = {
+      name                = "web-01"
+      ssh_keys            = ["deploy-key"]
+      placement_group_key = "web-spread"
+    }
+    web-02 = {
+      name                = "web-02"
+      ssh_keys            = ["deploy-key"]
+      placement_group_key = "web-spread"
+    }
+  }
+}
+```
+
+### Reverse DNS
+
+```hcl
+module "hcloud_vm" {
+  source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+  hcloud_token = var.hcloud_token
+
+  ssh_keys = {
+    deploy-key = "ssh-ed25519 AAAA... deploy@ci"
+  }
+
+  servers = {
+    mail-server = {
+      name     = "mail-01"
+      ssh_keys = ["deploy-key"]
+      rdns     = "mail.example.com"
+    }
+  }
+}
+```
+
+### Cloud-Init / User Data
+
+```hcl
+module "hcloud_vm" {
+  source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+  hcloud_token = var.hcloud_token
+
+  ssh_keys = {
+    deploy-key = "ssh-ed25519 AAAA... deploy@ci"
+  }
+
+  servers = {
+    app-server = {
+      name      = "app-01"
+      ssh_keys  = ["deploy-key"]
+      user_data = <<-EOT
+        #cloud-config
+        packages:
+          - nginx
+          - curl
+        runcmd:
+          - systemctl enable nginx
+          - systemctl start nginx
+      EOT
+    }
+  }
+}
+```
+
+### Public Network Toggle
+
+```hcl
+module "hcloud_vm" {
+  source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+  hcloud_token = var.hcloud_token
+
+  ssh_keys = {
+    deploy-key = "ssh-ed25519 AAAA... deploy@ci"
+  }
+
+  networks = {
+    internal = {
+      ip_range = "10.0.0.0/16"
+    }
+  }
+
+  subnets = {
+    internal-subnet = {
+      network_key  = "internal"
+      ip_range     = "10.0.1.0/24"
+      network_zone = "eu-central"
+    }
+  }
+
+  servers = {
+    private-server = {
+      name              = "private-01"
+      ssh_keys          = ["deploy-key"]
+      public_ipv4_enabled = false
+      public_ipv6_enabled = false
+      network_keys      = ["internal"]
+      private_ip        = "10.0.1.10"
+    }
+  }
+}
+```
+
+### Delete and Rebuild Protection
+
+```hcl
+module "hcloud_vm" {
+  source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+  hcloud_token = var.hcloud_token
+
+  ssh_keys = {
+    deploy-key = "ssh-ed25519 AAAA... deploy@ci"
+  }
+
+  servers = {
+    critical-server = {
+      name               = "critical-01"
+      ssh_keys           = ["deploy-key"]
+      delete_protection  = true
+      rebuild_protection = true
+    }
+  }
+}
+```
+
+### Multiple Volumes per Server
+
+```hcl
+module "hcloud_vm" {
+  source = "git::https://github.com/ginanck/terraform-hcloud-vm.git?ref=master"
+
+  hcloud_token = var.hcloud_token
+
+  ssh_keys = {
+    admin = "ssh-ed25519 AAAA... admin@host"
+  }
+
+  servers = {
+    db-server = {
+      name        = "db-01"
+      server_type = "cx42"
+      image       = "debian-12"
+      ssh_keys    = ["admin"]
+    }
+  }
+
+  volumes = {
+    db-data = {
+      size       = 100
+      server_key = "db-server"
+      format     = "xfs"
+      automount  = true
+    }
+    db-logs = {
+      size       = 50
+      server_key = "db-server"
+      format     = "ext4"
+      automount  = true
+      labels     = { purpose = "logs" }
+    }
+  }
+}
+```
+
 ### Terragrunt Example
 
 ```hcl
@@ -137,14 +323,27 @@ inputs = {
     admin = "ssh-ed25519 AAAA... admin@host"
   }
 
+  placement_groups = {
+    db-spread = {}
+  }
+
   servers = {
     db-server = {
-      name        = "db-01"
-      server_type = "cx42"
-      image       = "debian-12"
-      location    = "nbg1"
-      ssh_keys    = ["admin"]
-      labels      = { env = "production", role = "database" }
+      name                = "db-01"
+      server_type         = "cx42"
+      image               = "debian-12"
+      location            = "nbg1"
+      ssh_keys            = ["admin"]
+      labels              = { env = "production", role = "database" }
+      placement_group_key = "db-spread"
+      delete_protection   = true
+      rebuild_protection  = true
+      rdns                = "db-01.example.com"
+      user_data           = <<-EOT
+        #cloud-config
+        packages:
+          - postgresql
+      EOT
     }
   }
 
@@ -154,6 +353,13 @@ inputs = {
       server_key = "db-server"
       format     = "xfs"
       automount  = true
+    }
+    db-logs = {
+      size       = 50
+      server_key = "db-server"
+      format     = "ext4"
+      automount  = true
+      labels     = { purpose = "logs" }
     }
   }
 }
