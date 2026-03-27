@@ -65,30 +65,30 @@ module "vm" {
   # Servers
   servers = {
     web-01 = {
-      name              = "web-01"
-      server_type       = "cx22"
-      image             = "ubuntu-24.04"
-      location          = "nbg1"
-      backups           = true
-      network_keys      = ["internal"]
-      firewall_keys     = ["web"]
+      name                = "web-01"
+      server_type         = "cx22"
+      image               = "ubuntu-24.04"
+      location            = "nbg1"
+      backups             = true
+      network_keys        = ["internal"]
+      firewall_keys       = ["web"]
       placement_group_key = "web-spread"
-      private_ip        = "10.0.1.10"
+      private_ip          = "10.0.1.10"
       labels = {
         environment = "staging"
         role        = "web"
       }
     }
     web-02 = {
-      name              = "web-02"
-      server_type       = "cx22"
-      image             = "ubuntu-24.04"
-      location          = "nbg1"
-      backups           = true
-      network_keys      = ["internal"]
-      firewall_keys     = ["web"]
+      name                = "web-02"
+      server_type         = "cx22"
+      image               = "ubuntu-24.04"
+      location            = "nbg1"
+      backups             = true
+      network_keys        = ["internal"]
+      firewall_keys       = ["web"]
       placement_group_key = "web-spread"
-      private_ip        = "10.0.1.11"
+      private_ip          = "10.0.1.11"
       labels = {
         environment = "staging"
         role        = "web"
@@ -99,11 +99,11 @@ module "vm" {
   # Volumes
   volumes = {
     data-vol = {
-      size      = 10
-      location  = "nbg1"
+      size       = 10
+      location   = "nbg1"
       server_key = "web-01"
-      format    = "ext4"
-      automount = true
+      format     = "ext4"
+      automount  = true
     }
   }
 
